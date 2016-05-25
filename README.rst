@@ -8,7 +8,7 @@ Cloudant Python Client
     :scale: 100%
     :target: https://travis-ci.org/cloudant/python-cloudant
 
-.. |docs| image:: https://readthedocs.io/projects/pip/badge/
+.. |docs| image:: https://readthedocs.org/projects/pip/badge/
     :alt: docs
     :scale: 100%
     :target: http://python-cloudant.readthedocs.io
