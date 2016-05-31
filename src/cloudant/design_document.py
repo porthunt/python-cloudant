@@ -15,7 +15,7 @@
 """
 API module/class for interacting with a design document in a database.
 """
-from ._2to3 import iteritems_
+from ._2to3 import iteritems_, STRTYPE
 from ._common_util import QUERY_LANGUAGE, codify
 from .document import Document
 from .view import View, QueryIndexView
@@ -26,14 +26,14 @@ class DesignDocument(Document):
     Encapsulates a specialized version of a
     :class:`~cloudant.document.Document`.  A DesignDocument object is
     instantiated with a reference to a database and
-    provides an API to view management, search index management, list and show
+    provides an API to view management, index management, list and show
     functions, etc.  When instantiating a DesignDocument or
     when setting the document id (``_id``) field, the value must start with
     ``_design/``.  If it does not, then ``_design/`` will be prepended to
     the provided document id value.
 
-    Note:  Currently only the view management API exists.  Remaining design
-    document functionality will be added later.
+    Note:  Currently only the view management and search index management API
+    exists.  Remaining design document functionality will be added later.
 
     :param database: A database instance used by the DesignDocument.  Can be
         either a ``CouchDatabase`` or ``CloudantDatabase`` instance.
@@ -58,7 +58,7 @@ class DesignDocument(Document):
         return self.get('views')
 
     @property
-    def search_indexes(self):
+    def indexes(self):
         """
         Provides an accessor property to the indexes dictionary in the
         locally cached DesignDocument.
@@ -100,13 +100,13 @@ class DesignDocument(Document):
         :param str search_func: Javascript search index function.
         :param analyzer: Optional analyzer for this search index.
         """
-        if self.get_search_index(index_name) is not None:
+        if self.get_index(index_name) is not None:
             msg = ('Search index {0} already exists in this design doc'
                    .format(index_name))
             raise CloudantArgumentError(msg)
 
         search = {'index': codify(search_func), 'analyzer': analyzer}
-        self.search_indexes.__setitem__(index_name, search)
+        self.indexes.__setitem__(index_name, search)
 
     def update_view(self, view_name, map_func, reduce_func=None, **kwargs):
         """
@@ -142,14 +142,14 @@ class DesignDocument(Document):
         :param str search_func: Javascript search index function.
         :param analyzer: Optional analyzer for this search index.
         """
-        search = self.get_search_index(index_name)
+        search = self.get_index(index_name)
         if search is None:
             msg = ('Search index {0} does not exist in this design doc'
                    .format(index_name))
             raise CloudantArgumentError(msg)
 
         search = {'index': codify(search_func), 'analyzer': analyzer}
-        self.search_indexes.__setitem__(index_name, search)
+        self.indexes.__setitem__(index_name, search)
 
     def delete_view(self, view_name):
         """
@@ -170,18 +170,18 @@ class DesignDocument(Document):
 
         self.views.__delitem__(view_name)
 
-    def delete_search_index(self, index_name):
+    def delete_index(self, index_name):
         """
-        Removes an existing Cloudant search index in the locally cached
-        DesignDocument indexes dictionary.
+        Removes an existing index in the locally cached DesignDocument
+        indexes dictionary.
 
-        :param str index_name: Name used to identify the search index.
+        :param str index_name: Name used to identify the index.
         """
-        search_index = self.get_search_index(index_name)
-        if search_index is None:
+        index = self.get_index(index_name)
+        if index is None:
             return
 
-        self.search_indexes.__delitem__(index_name)
+        self.indexes.__delitem__(index_name)
 
     def fetch(self):
         """
@@ -214,10 +214,11 @@ class DesignDocument(Document):
                         **view_def
                     )
 
-        if not self.search_indexes:
+        if not self.indexes:
             # Ensure indexes dict exists in locally cached DesignDocument.
             self.setdefault('indexes', dict())
 
+    # pylint: disable-msg=too-many-branches
     def save(self):
         """
         Saves changes made to the locally cached DesignDocument object's data
@@ -244,7 +245,25 @@ class DesignDocument(Document):
             # Ensure empty views dict is not saved remotely.
             self.__delitem__('views')
 
-        if not self.search_indexes:
+        if self.indexes:
+            if self.get('language', None) != QUERY_LANGUAGE:
+                for index_name, search in self.iterindexes():
+                    # Check the instance of the javascript search function
+                    if not isinstance(search['index'], STRTYPE):
+                        msg = (
+                            'Function for search index {0} must '
+                            'be of type string.'
+                        ).format(index_name)
+                        raise CloudantException(msg)
+            else:
+                for index_name, index in self.iterindexes():
+                    if not isinstance(index['index'], dict):
+                        msg = (
+                            'Definition for query text index {0} must '
+                            'be of type dict.'
+                        ).format(index_name)
+                        raise CloudantException(msg)
+        else:
             # Ensure empty indexes dict is not saved remotely.
             self.__delitem__('indexes')
 
@@ -253,7 +272,7 @@ class DesignDocument(Document):
         if not self.views:
             # Ensure views dict exists in locally cached DesignDocument.
             self.setdefault('views', dict())
-        if not self.search_indexes:
+        if not self.indexes:
             # Ensure indexes dict exists in locally cached DesignDocument.
             self.setdefault('indexes', dict())
 
@@ -302,7 +321,7 @@ class DesignDocument(Document):
         :returns: Iterable containing search index name and associated
             search function object
         """
-        for index_name, search_func in iteritems_(self.search_indexes):
+        for index_name, search_func in iteritems_(self.indexes):
             yield index_name, search_func
 
     def list_views(self):
@@ -314,14 +333,14 @@ class DesignDocument(Document):
         """
         return list(self.views.keys())
 
-    def list_search_indexes(self):
+    def list_indexes(self):
         """
         Retrieves a list of available search indexes in the locally
         cached DesignDocument indexes dictionary.
 
         :returns: List of search index names
         """
-        return list(self.search_indexes.keys())
+        return list(self.indexes.keys())
 
     def get_view(self, view_name):
         """
@@ -334,16 +353,16 @@ class DesignDocument(Document):
         """
         return self.views.get(view_name)
 
-    def get_search_index(self, index_name):
+    def get_index(self, index_name):
         """
-        Retrieves a specific search index from the locally cached DesignDocument
+        Retrieves a specific index from the locally cached DesignDocument
         indexes dictionary by name.
 
-        :param str index_name: Name used to identify the search index.
+        :param str index_name: Name used to identify the index.
 
-        :returns: Search index dictionary for the specified index name
+        :returns: Index dictionary for the specified index name
         """
-        return self.search_indexes.get(index_name)
+        return self.indexes.get(index_name)
 
     def info(self):
         """

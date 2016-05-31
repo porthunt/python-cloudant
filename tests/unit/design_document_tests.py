@@ -437,6 +437,65 @@ class DesignDocumentTests(UnitTestDbBase):
         self.assertIsInstance(ddoc['indexes']['index001'], dict)
         self.assertIsInstance(ddoc['views']['view001'], QueryIndexView)
 
+    def test_text_index_save_fails_when_lang_is_not_query(self):
+        """
+        Tests that save fails when language is not query and a search index
+        string function is expected.
+        """
+        ddoc = DesignDocument(self.db, '_design/ddoc001')
+        ddoc['indexes']['index001'] = {
+            'index': {'index_array_lengths': True,
+                      'fields': [{'name': 'name', 'type': 'string'},
+                                 {'name': 'age', 'type': 'number'}],
+                      'default_field': {'enabled': True, 'analyzer': 'german'},
+                      'default_analyzer': 'keyword',
+                      'selector': {}},
+            'analyzer': {'name': 'perfield','default': 'keyword',
+                         'fields': {'$default': 'german'}}}
+        self.assertIsInstance(ddoc['indexes']['index001']['index'], dict)
+        with self.assertRaises(CloudantException) as cm:
+            ddoc.save()
+        err = cm.exception
+        self.assertEqual(
+            str(err),
+            'Function for search index index001 must be of type string.'
+        )
+
+    def test_text_index_save_fails_with_existing_search_index(self):
+        """
+        Tests that save fails when language is not query and both a query text
+        index and a search index exist in the design document.
+        """
+        ddoc = DesignDocument(self.db, '_design/ddoc001')
+        search_index = ('function (doc) {\n  index("default", doc._id); '
+                        'if (doc._id) {index("name", doc.name, '
+                        '{"store": true}); }\n}')
+        ddoc.add_search_index('search001', search_index)
+        self.assertIsInstance(
+            ddoc['indexes']['search001']['index'], str
+        )
+        ddoc.save()
+        self.assertTrue(ddoc['_rev'].startswith('1-'))
+        ddoc_remote = DesignDocument(self.db, '_design/ddoc001')
+        ddoc_remote.fetch()
+        ddoc_remote['indexes']['index001'] = {
+            'index': {'index_array_lengths': True,
+                      'fields': [{'name': 'name', 'type': 'string'},
+                                 {'name': 'age', 'type': 'number'}],
+                      'default_field': {'enabled': True, 'analyzer': 'german'},
+                      'default_analyzer': 'keyword',
+                      'selector': {}},
+            'analyzer': {'name': 'perfield','default': 'keyword',
+                         'fields': {'$default': 'german'}}}
+        self.assertIsInstance(ddoc_remote['indexes']['index001']['index'], dict)
+        with self.assertRaises(CloudantException) as cm:
+            ddoc_remote.save()
+        err = cm.exception
+        self.assertEqual(
+            str(err),
+            'Function for search index index001 must be of type string.'
+        )
+
     def test_mr_view_save_fails_when_lang_is_query(self):
         """
         Tests that save fails when language is query but views are map reduce
@@ -783,7 +842,7 @@ class DesignDocumentTests(UnitTestDbBase):
                 '{"store": true}); }\n}',
              'analyzer': 'standard'}
         )
-        ddoc.delete_search_index('search001')
+        ddoc.delete_index('search001')
         self.assertEqual(ddoc.get('indexes'), {})
 
     def test_fetch_search_index(self):
@@ -831,7 +890,61 @@ class DesignDocumentTests(UnitTestDbBase):
         self.assertEqual(ddoc_remote['_id'], '_design/ddoc001')
         self.assertTrue(ddoc_remote['_rev'].startswith('1-'))
         self.assertEqual(ddoc_remote['_rev'], ddoc['_rev'])
-        self.assertEqual(ddoc_remote.search_indexes, {})
+        self.assertEqual(ddoc_remote.indexes, {})
+
+    def test_search_index_save_fails_when_lang_is_query(self):
+        """
+        Tests that save fails when language is query and a text index dict
+        definition is expected.
+        """
+        ddoc = DesignDocument(self.db, '_design/ddoc001')
+        ddoc['language'] = 'query'
+        ddoc['indexes']['search001'] = {
+            'index': 'function (doc) {\n  index("default", doc._id); '
+                     'if (doc._id) {index("name", doc.name, '
+                     '{"store": true}); }\n}',
+            'analyzer': 'standard'}
+        self.assertIsInstance(ddoc['indexes']['search001']['index'], str)
+        with self.assertRaises(CloudantException) as cm:
+            ddoc.save()
+        err = cm.exception
+        self.assertEqual(
+            str(err),
+            'Definition for query text index search001 must be of type dict.'
+        )
+
+    def test_search_index_save_fails_with_existing_text_index(self):
+        """
+        Tests that save fails when language is query and both a search index
+        and a text index exist in the design document.
+        """
+        ddoc = DesignDocument(self.db, '_design/ddoc001')
+        ddoc['language'] = 'query'
+        ddoc['indexes']['index001'] = {
+            'index': {'index_array_lengths': True,
+                      'fields': [{'name': 'name', 'type': 'string'},
+                                 {'name': 'age', 'type': 'number'}],
+                      'default_field': {'enabled': True, 'analyzer': 'german'},
+                      'default_analyzer': 'keyword',
+                      'selector': {}},
+            'analyzer': {'name': 'perfield','default': 'keyword',
+                         'fields': {'$default': 'german'}}}
+        ddoc.save()
+        self.assertTrue(ddoc['_rev'].startswith('1-'))
+        search_index = ('function (doc) {\n  index("default", doc._id); '
+                        'if (doc._id) {index("name", doc.name, '
+                        '{"store": true}); }\n}')
+        ddoc.add_search_index('search001', search_index)
+        self.assertIsInstance(
+            ddoc['indexes']['search001']['index'], str
+        )
+        with self.assertRaises(CloudantException) as cm:
+            ddoc.save()
+        err = cm.exception
+        self.assertEqual(
+            str(err),
+            'Definition for query text index search001 must be of type dict.'
+        )
 
     def test_search_index_save_succeeds(self):
         """
@@ -898,7 +1011,7 @@ class DesignDocumentTests(UnitTestDbBase):
         ddoc.add_search_index('search002', index)
         ddoc.add_search_index('search003', index)
         self.assertTrue(
-            all(x in ddoc.list_search_indexes() for x in [
+            all(x in ddoc.list_indexes() for x in [
                 'search001',
                 'search002',
                 'search003'
@@ -917,7 +1030,7 @@ class DesignDocumentTests(UnitTestDbBase):
         ddoc.add_search_index('search002', index)
         ddoc.add_search_index('search003', index)
         self.assertEqual(
-            ddoc.get_search_index('search002'),
+            ddoc.get_index('search002'),
             {'index': 'function (doc) {\n  index("default", doc._id); '
                 'if (doc._id) {index("name", doc.name, '
                 '{"store": true}); }\n}',
