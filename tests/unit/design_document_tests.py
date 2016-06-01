@@ -750,7 +750,7 @@ class DesignDocumentTests(UnitTestDbBase):
         err = cm.exception
         self.assertEqual(
             str(err),
-            'Search index search001 already exists in this design doc'
+            'An index with name search001 already exists in this design doc'
         )
 
     def test_update_a_search_index(self):
@@ -821,7 +821,7 @@ class DesignDocumentTests(UnitTestDbBase):
         err = cm.exception
         self.assertEqual(
             str(err),
-            'Search index search001 does not exist in this design doc'
+            'An index with name search001 does not exist in this design doc'
         )
 
     def test_delete_a_search_index(self):
@@ -880,6 +880,9 @@ class DesignDocumentTests(UnitTestDbBase):
         Ensure that the document fetched from the database returns the
         DesignDocument format as expected when retrieving a design document
         containing no search indexes.
+        The :func:`~cloudant.design_document.DesignDocument.fetch` function
+        adds the ``indexes`` key in the locally cached DesignDocument if
+        indexes do not exist in the remote design document.
         """
         ddoc = DesignDocument(self.db, '_design/ddoc001')
         ddoc.save()

@@ -63,7 +63,7 @@ class DesignDocument(Document):
         Provides an accessor property to the indexes dictionary in the
         locally cached DesignDocument.
 
-        :returns: Dictionary containing search index names and search functions
+        :returns: Dictionary containing index names and index objects
             as key/value
         """
         return self.get('indexes')
@@ -101,7 +101,7 @@ class DesignDocument(Document):
         :param analyzer: Optional analyzer for this search index.
         """
         if self.get_index(index_name) is not None:
-            msg = ('Search index {0} already exists in this design doc'
+            msg = ('An index with name {0} already exists in this design doc'
                    .format(index_name))
             raise CloudantArgumentError(msg)
 
@@ -144,7 +144,7 @@ class DesignDocument(Document):
         """
         search = self.get_index(index_name)
         if search is None:
-            msg = ('Search index {0} does not exist in this design doc'
+            msg = ('An index with name {0} does not exist in this design doc'
                    .format(index_name))
             raise CloudantArgumentError(msg)
 
@@ -318,8 +318,8 @@ class DesignDocument(Document):
             for index_name, search_func in ddoc.iterindexes():
                 # Perform search index processing
 
-        :returns: Iterable containing search index name and associated
-            search function object
+        :returns: Iterable containing index name and associated
+            index object
         """
         for index_name, search_func in iteritems_(self.indexes):
             yield index_name, search_func
@@ -335,10 +335,10 @@ class DesignDocument(Document):
 
     def list_indexes(self):
         """
-        Retrieves a list of available search indexes in the locally
-        cached DesignDocument indexes dictionary.
+        Retrieves a list of available indexes in the locally cached
+        DesignDocument.
 
-        :returns: List of search index names
+        :returns: List of index names
         """
         return list(self.indexes.keys())
 
