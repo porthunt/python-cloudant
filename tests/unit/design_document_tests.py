@@ -703,14 +703,13 @@ class DesignDocumentTests(UnitTestDbBase):
         self.assertEqual(
             ddoc.get('indexes')['search001'],
             {'index': 'function (doc) {\n  index("default", doc._id); '
-                'if (doc._id) {index("name", doc.name, {"store": true}); }\n}',
-                'analyzer': 'standard'}
+                'if (doc._id) {index("name", doc.name, {"store": true}); }\n}'}
          )
 
     def test_add_a_search_index_with_analyzer(self):
         """
-        Test that adding a search index adds a search index object to
-        the DesignDocument dictionary.
+        Test that adding a search index with an analyzer adds a search index
+        object to the DesignDocument dictionary.
         """
         ddoc = DesignDocument(self.db, '_design/ddoc001')
         self.assertEqual(ddoc.get('indexes'), {})
@@ -762,7 +761,7 @@ class DesignDocumentTests(UnitTestDbBase):
         ddoc.add_search_index('search001', 'not-a-valid-search-index')
         self.assertEqual(
             ddoc.get('indexes')['search001'],
-            {'index': 'not-a-valid-search-index', 'analyzer': 'standard'}
+            {'index': 'not-a-valid-search-index'}
         )
         ddoc.update_search_index(
             'search001',
@@ -773,9 +772,7 @@ class DesignDocumentTests(UnitTestDbBase):
             ddoc.get('indexes')['search001'],
             {'index': 'function (doc) {\n  index("default", doc._id); '
                 'if (doc._id) {index("name", doc.name, '
-                '{"store": true}); }\n}',
-             'analyzer': 'standard'
-            }
+                '{"store": true}); }\n}'}
         )
 
     def test_update_a_search_index_with_analyzer(self):
@@ -839,8 +836,7 @@ class DesignDocumentTests(UnitTestDbBase):
             ddoc.get('indexes')['search001'],
             {'index': 'function (doc) {\n  index("default", doc._id); '
                 'if (doc._id) {index("name", doc.name, '
-                '{"store": true}); }\n}',
-             'analyzer': 'standard'}
+                '{"store": true}); }\n}'}
         )
         ddoc.delete_index('search001')
         self.assertEqual(ddoc.get('indexes'), {})
@@ -855,9 +851,9 @@ class DesignDocumentTests(UnitTestDbBase):
         search_index = ('function (doc) {\n  index("default", doc._id); '
                         'if (doc._id) {index("name", doc.name, '
                         '{"store": true}); }\n} ')
-        ddoc.add_search_index('search001', search_index, 'simple')
+        ddoc.add_search_index('search001', search_index)
         ddoc.add_search_index('search002', search_index, 'simple')
-        ddoc.add_search_index('search003', search_index, 'simple')
+        ddoc.add_search_index('search003', search_index, 'standard')
         ddoc.save()
         ddoc_remote = DesignDocument(self.db, '_design/ddoc001')
         self.assertNotEqual(ddoc_remote, ddoc)
@@ -868,9 +864,9 @@ class DesignDocumentTests(UnitTestDbBase):
             '_id': '_design/ddoc001',
             '_rev': ddoc['_rev'],
             'indexes': {
-                'search001': {'index': search_index, 'analyzer': 'simple'},
+                'search001': {'index': search_index},
                 'search002': {'index': search_index, 'analyzer': 'simple'},
-                'search003': {'index': search_index, 'analyzer': 'simple'}
+                'search003': {'index': search_index, 'analyzer': 'standard'}
             },
             'views': {}
         })
@@ -1036,8 +1032,7 @@ class DesignDocumentTests(UnitTestDbBase):
             ddoc.get_index('search002'),
             {'index': 'function (doc) {\n  index("default", doc._id); '
                 'if (doc._id) {index("name", doc.name, '
-                '{"store": true}); }\n}',
-             'analyzer': 'standard'}
+                '{"store": true}); }\n}'}
         )
 
 if __name__ == '__main__':

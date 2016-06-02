@@ -91,7 +91,7 @@ class DesignDocument(Document):
         view = View(self, view_name, map_func, reduce_func, **kwargs)
         self.views.__setitem__(view_name, view)
 
-    def add_search_index(self, index_name, search_func, analyzer='standard'):
+    def add_search_index(self, index_name, search_func, analyzer=None):
         """
         Appends a Cloudant search index to the locally cached DesignDocument
         indexes dictionary.
@@ -104,8 +104,11 @@ class DesignDocument(Document):
             msg = ('An index with name {0} already exists in this design doc'
                    .format(index_name))
             raise CloudantArgumentError(msg)
+        if analyzer is not None:
+            search = {'index': codify(search_func), 'analyzer': analyzer}
+        else:
+            search = {'index': codify(search_func)}
 
-        search = {'index': codify(search_func), 'analyzer': analyzer}
         self.indexes.__setitem__(index_name, search)
 
     def update_view(self, view_name, map_func, reduce_func=None, **kwargs):
@@ -133,7 +136,7 @@ class DesignDocument(Document):
         view = View(self, view_name, map_func, reduce_func, **kwargs)
         self.views.__setitem__(view_name, view)
 
-    def update_search_index(self, index_name, search_func, analyzer='standard'):
+    def update_search_index(self, index_name, search_func, analyzer=None):
         """
         Modifies/overwrites an existing Cloudant search index in the
         locally cached DesignDocument indexes dictionary.
@@ -147,8 +150,11 @@ class DesignDocument(Document):
             msg = ('An index with name {0} does not exist in this design doc'
                    .format(index_name))
             raise CloudantArgumentError(msg)
+        if analyzer is not None:
+            search = {'index': codify(search_func), 'analyzer': analyzer}
+        else:
+            search = {'index': codify(search_func)}
 
-        search = {'index': codify(search_func), 'analyzer': analyzer}
         self.indexes.__setitem__(index_name, search)
 
     def delete_view(self, view_name):
