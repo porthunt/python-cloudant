@@ -15,7 +15,7 @@
 Python 2 to 3 compatibility methods
 
 The philosophy employed here is to treat py2 as the special case vs. py3 as
-future Python releases presumably will retain new semamtics in py3.
+future Python releases presumably will retain new semantics in py3.
 """
 import sys
 
@@ -23,20 +23,19 @@ PY2 = sys.version_info[0] < 3
 ENCODING = 'utf-8'
 NONETYPE = type(None)
 
-# pylint: disable=undefined-variable
+# pylint: skip-file
 STRTYPE = basestring if PY2 else str
 
-# pylint: disable=undefined-variable
+# pylint: skip-file
 UNITYPE = unicode if PY2 else str
 
-# pylint: disable=undefined-variable
+# pylint: skip-file
 LONGTYPE = long if PY2 else int
 
 if PY2:
-    # pylint: disable=wrong-import-position,no-name-in-module,import-error,unused-import
+    # pylint: skip-file
     from urllib import quote as url_quote, quote_plus as url_quote_plus
     from urlparse import urlparse as url_parse
-    from ConfigParser import RawConfigParser
 
     def iteritems_(adict):
         """
@@ -56,10 +55,9 @@ if PY2:
         """
         return itr.next()
 else:
-    from urllib.parse import urlparse as url_parse  # pylint: disable=wrong-import-position,no-name-in-module,import-error,ungrouped-imports
-    from urllib.parse import quote as url_quote  # pylint: disable=wrong-import-position,no-name-in-module,import-error,ungrouped-imports
-    from urllib.parse import quote_plus as url_quote_plus  # pylint: disable=wrong-import-position,no-name-in-module,import-error,ungrouped-imports
-    from configparser import RawConfigParser  # pylint: disable=wrong-import-position,no-name-in-module,import-error
+    from urllib.parse import urlparse as url_parse  # pylint: skip-file
+    from urllib.parse import quote as url_quote  # pylint: skip-file
+    from urllib.parse import quote_plus as url_quote_plus  # pylint: skip-file
 
     def iteritems_(adict):
         """
